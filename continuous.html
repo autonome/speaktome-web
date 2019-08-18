@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>SpeakToMe</title>
+    <meta name="description" content="Example usage of SpeakToMe API component.">
+    <style type="text/css">
+      body {
+        font-family: -apple-system, BlinkMacSystemFont,
+          "Segoe UI", "Roboto", "Oxygen",
+          "Ubuntu", "Cantarell", "Fira Sans",
+          "Droid Sans", "Helvetica Neue", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+
+<script src="../hypersimple.min.js"></script>
+<script src="build/stm_web.min.js"></script>
+<script>
+
+async function init() {
+
+  const stm = SpeakToMe({
+    timeout: 30000,
+    listener: onServiceResult,
+    language: 'en-US'
+  });
+
+  const {comp, html, render} = hypersimple;
+
+  let strings = {
+    LISTENING: 'Listening...',
+    PROCESSING: 'Processing...',
+    SENDING: 'Sending...'
+  };
+
+  // model: it will be mutated to trigger updates on changes
+  const model = {
+    statusLabel: strings.LISTENING,
+    results: [],
+    resultsCount: 0
+  };
+
+  // Set a handler for results
+  function onServiceResult(msg) {
+    console.log('onServiceResult', msg);
+
+    switch(msg.state) {
+      case 'listening':
+        model.statusLabel = strings.LISTENING;
+        break;
+      case 'processing':
+        model.statusLabel = strings.PROCESSING;
+        break;
+      case 'sending':
+        model.statusLabel = strings.SENDING;
+        break;
+      case 'error':
+        console.log('stm result error!', msg.error);
+        break;
+      case 'result':
+        if (msg.data.length) {
+          let results = msg.data.sort(function(a, b) { a.confidence - b.confidence; });
+          model.results.push(results[0])
+          model.resultsCount++;
+        }
+        break;
+      case 'ready':
+        model.statusLabel = strings.LISTENING;
+        //stm.listen();
+        console.log('started listening again');
+        break;
+      default:
+        console.log('wtf, no matching states?');
+    }
+  }
+
+  const SpeechResult = comp(model => html`
+    <div>
+      ${model.text} (${model.confidence})
+    </div>
+  `);
+
+  const SpeechResults = comp(model => html`
+    <div>${model.results.map(
+      result => {
+        return SpeechResult(result);
+      }
+    )}</div>
+  `);
+
+  // main App component
+  const App = comp(model => html`
+    <section>
+      <div class='status'>${model.statusLabel}</div>
+    </section>
+    <section>
+      ${SpeechResults(model)}
+    </section>
+  `);
+
+  // render
+  render(document.body, () => App(model));
+
+  // start listening
+  setTimeout(() => {
+    stm.listen();
+  }, 3000);
+}
+
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

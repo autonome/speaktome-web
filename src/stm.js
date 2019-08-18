@@ -187,7 +187,7 @@ function SpeakToMe(options) {
       // Initialize VAD
       // TODO: Re-use VAD instead of initializing on each use.
       function onVADComplete(reason) {
-        // console.log('onVADComplete', reason);
+        console.log('onVADComplete', reason);
         vadReason = reason;
         stop();
       }
